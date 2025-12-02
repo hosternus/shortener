@@ -2,10 +2,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import RedirectResponse
-from fastapi_cache.decorator import cache
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
-from redis.asyncio import Redis as aioredis
+# from fastapi_cache.decorator import cache
+# from fastapi_cache import FastAPICache
+# from fastapi_cache.backends.redis import RedisBackend
+# from redis.asyncio import Redis as aioredis
 from sqlalchemy.orm import Session
 
 from database.crud import get_url, create_url, get_url_by_source_url
@@ -16,21 +16,21 @@ from config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    redis = None
-    if settings.REDIS_CACHE_URL is not None:
-        try:
-            redis = aioredis.from_url(settings.REDIS_CACHE_URL.get_secret_value(), encoding="utf8", decode_responses=True)
-            FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
-        except:
-            redis = None
+    # redis = None
+    # if settings.REDIS_CACHE_URL is not None:
+    #     try:
+    #         redis = aioredis.from_url(settings.REDIS_CACHE_URL.get_secret_value(), encoding="utf8", decode_responses=True)
+    #         FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
+    #     except:
+    #         redis = None
     try:
         create_tables()
     except:
         raise RuntimeError("Failed to init database tables")
     yield
     close_db()
-    if redis is not None:
-        await redis.close()
+    # if redis is not None:
+    #     await redis.close()
 
 app = FastAPI(lifespan=lifespan)
 
