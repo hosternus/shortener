@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from config import settings
-from database.model import Url, Base
+from database.model import Base
 
 if settings.DATABASE_URL is None:
     raise RuntimeError("DATABASE URL is None")
