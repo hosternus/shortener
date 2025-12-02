@@ -60,8 +60,8 @@ async def create_url_route(url_object: CreateUrl, session: Session = Depends(get
         url = get_url_by_source_url(session=session, source_url=str(url_object.source_url))
         if url is None:
             url = create_url(
-                session=session, 
-                source_url=str(url_object.source_url), 
+                session=session,
+                source_url=str(url_object.source_url),
                 short_id=generate_short_id()
             )
         session.commit()
