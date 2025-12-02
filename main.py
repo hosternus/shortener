@@ -36,7 +36,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/{url_id}")
-@cache(expire=None)
+# @cache(expire=None)
 async def return_url(url_id: str, session: Session = Depends(get_session)):
     try:
         url = get_url(session=session, short_id=url_id)
@@ -54,7 +54,7 @@ async def return_url(url_id: str, session: Session = Depends(get_session)):
 
 
 @app.post("/url")
-@cache(expire=None)
+# @cache(expire=None)
 async def create_url_route(url_object: CreateUrl, session: Session = Depends(get_session)):
     try:
         url = get_url_by_source_url(session=session, source_url=str(url_object.source_url))
@@ -70,7 +70,7 @@ async def create_url_route(url_object: CreateUrl, session: Session = Depends(get
         raise HTTPException(status_code=500, detail=str(e))
     if settings.BASE_URL is None:
         raise HTTPException(status_code=500, detail="Base url not provided")
-    return {"short_url": f"{settings.BASE_URL}/{url.short_id}"}
+    return {"short_url": f"{settings.BASE_URL.host}/{url.short_id}"}
 
 if __name__ == "__main__":
     import uvicorn
