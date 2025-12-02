@@ -7,7 +7,7 @@ from database.model import Url, Base
 if settings.DATABASE_URL is None:
     raise RuntimeError("DATABASE URL is None")
 
-engine = create_engine(settings.DATABASE_URL, echo=False)
+engine = create_engine(settings.DATABASE_URL.get_secret_value(), echo=False)
 session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_session():
