@@ -71,3 +71,7 @@ async def create_url_route(url_object: CreateUrl, session: Session = Depends(get
     if settings.BASE_URL is None:
         raise HTTPException(status_code=500, detail="Base url not provided")
     return {"short_url": f"{settings.BASE_URL}/{url.short_id}"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host='0.0.0.0', port=80)
