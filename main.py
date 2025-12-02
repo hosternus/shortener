@@ -1,16 +1,17 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import RedirectResponse
 # from fastapi_cache.decorator import cache
 # from fastapi_cache import FastAPICache
 # from fastapi_cache.backends.redis import RedisBackend
 # from redis.asyncio import Redis as aioredis
+from pydantic import HttpUrl
 from sqlalchemy.orm import Session
 
 from database.crud import get_url, create_url, get_url_by_source_url
 from database.core import get_session, create_tables, close_db
-from schemas import CreateUrl
+from schemas import ShortedURLRequest, ShortedURLResponse
 from utils import generate_short_id
 from config import settings
 
@@ -35,27 +36,38 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/{url_id}")
-# @cache(expire=None)
-async def return_url(url_id: str, session: Session = Depends(get_session)):
+@app.get("/{short_id}/stats")
+async def get_url_stats(short_id: str, session: Session = Depends(get_session)) -> ShortedURLResponse:
     try:
-        url = get_url(session=session, short_id=url_id)
-        if url is None:
-            raise HTTPException(status_code=404, detail="Not found")
-        url.visits += 1
-        session.commit()
-        return RedirectResponse(url=url.source_url)
-    except HTTPException as e:
-        session.rollback()
-        raise e
+        url = get_url(session=session, short_id=short_id)
     except Exception as e:
-        session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    if url is None:
+        raise HTTPException(status_code=404, detail="URL not found")
+    if settings.BASE_URL is None:
+        raise HTTPException(status_code=500, detail="Base url not provided")
+    respone = ShortedURLResponse.model_validate(url)
+    respone.full_url = HttpUrl(f"{settings.BASE_URL}{respone.short_id}")
+    return respone
+
+
+@app.get("/{short_id}")
+# @cache(expire=None)
+async def redirect_url(short_id: str, session: Session = Depends(get_session)) -> RedirectResponse:
+    try:
+        url = get_url(session=session, short_id=short_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    if url is None:
+        raise HTTPException(status_code=404, detail="URL not found")
+    return RedirectResponse(url=url.source_url)
+        # url.visits += 1
+        # session.commit()
 
 
 @app.post("/url")
 # @cache(expire=None)
-async def create_url_route(url_object: CreateUrl, session: Session = Depends(get_session)):
+async def create_url_route(url_object: ShortedURLRequest, session: Session = Depends(get_session)) -> ShortedURLResponse:
     try:
         url = get_url_by_source_url(session=session, source_url=str(url_object.source_url))
         if url is None:
@@ -64,14 +76,17 @@ async def create_url_route(url_object: CreateUrl, session: Session = Depends(get
                 source_url=str(url_object.source_url),
                 short_id=generate_short_id()
             )
-        session.commit()
+            session.commit()
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     if settings.BASE_URL is None:
         raise HTTPException(status_code=500, detail="Base url not provided")
-    return {"short_url": f"{settings.BASE_URL}{url.short_id}"}
+    respone = ShortedURLResponse.model_validate(url)
+    respone.full_url = HttpUrl(f"{settings.BASE_URL}{respone.short_id}")
+    return respone
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=80)
+    uvicorn.run(app, host='0.0.0.0', port=80, log_level='info')
