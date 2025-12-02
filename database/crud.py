@@ -1,8 +1,9 @@
 import logging
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, update
 
+from database.core import session_factory
 from database.model import Url
 
 logger = logging.getLogger(__name__)
@@ -32,3 +33,18 @@ def get_url_by_source_url(session: Session, source_url: str) -> Url | None:
     res = query.scalar_one_or_none()
     logger.info(f"Loaded object from source_url with short_id: {res.short_id}" if res is not None else f"No object with such source_url: {source_url}")
     return res
+
+def increment_visits(url_id: int) -> None:
+    stmt = (
+        update(Url)
+        .where(Url.id == url_id)
+        .values(visits=Url.visits + 1)
+    )
+    with session_factory() as session:
+        try:
+            session.execute(stmt)
+            session.commit()
+            logger.info(f"Incrimented url object with id: {url_id}")
+        except Exception as e:
+            logger.error(f"Error while incrementing url object with id: {url_id}, error: {str(e)}")
+            session.rollback()

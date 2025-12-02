@@ -2,8 +2,7 @@ import logging
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Depends
-# from fastapi import BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import RedirectResponse
 # from fastapi_cache.decorator import cache
 # from fastapi_cache import FastAPICache
@@ -12,7 +11,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import HttpUrl
 from sqlalchemy.orm import Session
 
-from database.crud import get_url, create_url, get_url_by_source_url
+from database.crud import get_url, create_url, get_url_by_source_url, increment_visits
 from database.core import get_session, create_tables, close_db
 from schemas import ShortedURLRequest, ShortedURLResponse
 from utils import generate_short_id
@@ -65,7 +64,7 @@ async def get_url_stats(short_id: str, session: Session = Depends(get_session)) 
 
 @app.get("/{short_id}")
 # @cache(expire=None)
-async def redirect_url(short_id: str, session: Session = Depends(get_session)) -> RedirectResponse:
+async def redirect_url(short_id: str, background: BackgroundTasks, session: Session = Depends(get_session)) -> RedirectResponse:
     try:
         url = get_url(session=session, short_id=short_id)
     except Exception as e:
@@ -73,9 +72,8 @@ async def redirect_url(short_id: str, session: Session = Depends(get_session)) -
         raise HTTPException(status_code=500, detail=str(e))
     if url is None:
         raise HTTPException(status_code=404, detail="URL not found")
+    background.add_task(increment_visits, url.id)
     return RedirectResponse(url=url.source_url)
-        # url.visits += 1
-        # session.commit()
 
 
 @app.post("/url")
