@@ -1,4 +1,5 @@
 import logging
+logging.basicConfig(level=logging.INFO)
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
@@ -116,4 +117,4 @@ async def create_url_route(url_object: ShortedURLRequest, session: Session = Dep
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=80, log_level='info')
+    uvicorn.run(app, host='0.0.0.0', port=80)
