@@ -34,17 +34,17 @@ def get_url_by_source_url(session: Session, source_url: str) -> Url | None:
     logger.info(f"Loaded object from source_url with short_id: {res.short_id}" if res is not None else f"No object with such source_url: {source_url}")
     return res
 
-def increment_visits(url_id: int) -> None:
+def increment_visits(short_id: str) -> None:
     stmt = (
         update(Url)
-        .where(Url.id == url_id)
+        .where(Url.short_id == short_id)
         .values(visits=Url.visits + 1)
     )
     with session_factory() as session:
         try:
             session.execute(stmt)
             session.commit()
-            logger.info(f"Incrimented url object with id: {url_id}")
+            logger.info(f"Incrimented url object with id: {short_id}")
         except Exception as e:
-            logger.error(f"Error while incrementing url object with id: {url_id}, error: {str(e)}")
+            logger.error(f"Error while incrementing url object with id: {short_id}, error: {str(e)}")
             session.rollback()
