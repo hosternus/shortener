@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     # if redis is not None:
     #     await redis.close()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, docs_url=None)
 
 
 @app.get("/{short_id}/stats")
