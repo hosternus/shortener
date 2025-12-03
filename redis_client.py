@@ -1,7 +1,11 @@
+import logging
+
 from redis.asyncio import Redis
 
 from config import settings
 
+
+logger = logging.getLogger(__name__)
 redis_pool: Redis | None = None
 
 async def init_redis() -> None:
@@ -13,11 +17,13 @@ async def init_redis() -> None:
             decode_responses=True,
             max_connections=settings.redis.MAX_CONN
         )
+        logger.info("Redis client initialized")
 
 async def close_redis() -> None:
     global redis_pool
     if redis_pool:
         await redis_pool.aclose()
+        logger.info("Redis client closed")
 
 async def get_redis() -> Redis:
     global redis_pool
