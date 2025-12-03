@@ -10,7 +10,7 @@ class RedisConfig(BaseSettings):
 
 class Settings(BaseSettings):
     DATABASE_URL: SecretStr | None = None
-    redis = RedisConfig()
+    redis: RedisConfig = RedisConfig()
     BASE_URL: HttpUrl | None = None
 
     model_config = SettingsConfigDict(extra='forbid')
