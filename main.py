@@ -9,7 +9,7 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from redis.asyncio import Redis
 from pydantic import HttpUrl
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.crud import get_url, create_url, get_url_by_source_url, increment_visits
 from database.core import get_session, create_tables, close_db
@@ -26,13 +26,13 @@ async def lifespan(app: FastAPI):
         await init_redis()
         redis = await get_redis()
         FastAPICache.init(RedisBackend(redis=redis), prefix="fastapi-cache")
-        create_tables()
+        await create_tables()
     except Exception as e:
         logger.error(f"Failed to initialize app: {str(e)}")
         raise e
     yield
     try:
-        close_db()
+        await close_db()
     except Exception as e:
         logger.error(f"Failed to close database connection: {str(e)}")
     try:
@@ -45,10 +45,10 @@ app = FastAPI(lifespan=lifespan, docs_url=None)
 
 @app.get("/{short_id}/stats")
 @cache(expire=120)
-async def get_url_stats(short_id: str, session: Session = Depends(get_session)) -> ShortedURLResponse:
+async def get_url_stats(short_id: str, session: AsyncSession = Depends(get_session)) -> ShortedURLResponse:
     logger.info(f"Requested stats for short_id: {short_id}")
     try:
-        url = get_url(session=session, short_id=short_id)
+        url = await get_url(session=session, short_id=short_id)
     except Exception as e:
         logger.error("Error while executing database query")
         raise HTTPException(status_code=500, detail=str(e))
@@ -63,7 +63,7 @@ async def get_url_stats(short_id: str, session: Session = Depends(get_session)) 
 
 
 @app.get("/{short_id}")
-async def redirect_url(short_id: str, background: BackgroundTasks, session: Session = Depends(get_session), redis: Redis = Depends(get_redis)) -> RedirectResponse:
+async def redirect_url(short_id: str, background: BackgroundTasks, session: AsyncSession = Depends(get_session), redis: Redis = Depends(get_redis)) -> RedirectResponse:
     source_url: str | None = None
     r_key: str = f"short_id:{short_id}"
     try:
@@ -74,7 +74,7 @@ async def redirect_url(short_id: str, background: BackgroundTasks, session: Sess
         logger.error(f"Failed to retrieve cache from redis: {str(e)}")
     if source_url is None:
         try:
-            url = get_url(session=session, short_id=short_id)
+            url = await get_url(session=session, short_id=short_id)
             if url:
                 source_url = url.source_url
                 try:
@@ -92,7 +92,7 @@ async def redirect_url(short_id: str, background: BackgroundTasks, session: Sess
 
 @app.post("/url")
 @cache(expire=3600)
-async def create_url_route(url_object: ShortedURLRequest, session: Session = Depends(get_session)) -> ShortedURLResponse:
+async def create_url_route(url_object: ShortedURLRequest, session: AsyncSession = Depends(get_session)) -> ShortedURLResponse:
     try:
         url = get_url_by_source_url(session=session, source_url=str(url_object.source_url))
         if url is None:
@@ -101,10 +101,10 @@ async def create_url_route(url_object: ShortedURLRequest, session: Session = Dep
                 source_url=str(url_object.source_url),
                 short_id=generate_short_id()
             )
-            session.commit()
+            await session.commit()
             logger.info("Transaction commited")
     except Exception as e:
-        session.rollback()
+        await session.rollback()
         logger.error("Error while executing database query")
         raise HTTPException(status_code=500, detail=str(e))
     if settings.BASE_URL is None:
