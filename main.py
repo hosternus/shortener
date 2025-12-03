@@ -94,9 +94,9 @@ async def redirect_url(short_id: str, background: BackgroundTasks, session: Asyn
 @cache(expire=3600)
 async def create_url_route(url_object: ShortedURLRequest, session: AsyncSession = Depends(get_session)) -> ShortedURLResponse:
     try:
-        url = get_url_by_source_url(session=session, source_url=str(url_object.source_url))
+        url = await get_url_by_source_url(session=session, source_url=str(url_object.source_url))
         if url is None:
-            url = create_url(
+            url = await create_url(
                 session=session,
                 source_url=str(url_object.source_url),
                 short_id=generate_short_id()
