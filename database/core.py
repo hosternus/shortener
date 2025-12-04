@@ -12,7 +12,7 @@ if settings.DATABASE_URL is None:
     raise RuntimeError("Database URL is None")
 
 engine = create_async_engine(settings.DATABASE_URL.get_secret_value(), echo=False)
-session_factory = async_sessionmaker(autocommit=False, autoflush=False, bind=engine)
+session_factory = async_sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
 
 async def get_session():
     logger.info("Database session opening")
