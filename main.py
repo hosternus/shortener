@@ -64,6 +64,8 @@ async def get_url_stats(short_id: str, session: AsyncSession = Depends(get_sessi
 
 @app.get("/{short_id}")
 async def redirect_url(short_id: str, background: BackgroundTasks, session: AsyncSession = Depends(get_session), redis: Redis = Depends(get_redis)) -> RedirectResponse:
+    if "." in short_id:
+        raise HTTPException(status_code=404)
     source_url: str | None = None
     r_key: str = f"short_id:{short_id}"
     try:
