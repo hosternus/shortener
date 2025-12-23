@@ -71,7 +71,7 @@ async def redirect_url(short_id: str, background: BackgroundTasks, session: Asyn
     try:
         cached = await redis.get(r_key)
         if cached:
-            source_url = cached
+            source_url = cached.decode("utf-8")
     except Exception as e:
         logger.error(f"Failed to retrieve cache from redis: {str(e)}")
     if source_url is None:
